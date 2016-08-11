@@ -39,9 +39,9 @@ void PrimitiveBox::update() {
 
   Vector3 ofs = Vector3(width/2, height/2, length/2);
 
-  Primitive::begin();
+  begin();
 
-  SurfaceTool::add_smooth_group(Primitive::smooth);
+  add_smooth_group(smooth);
 
   if (right_face)
     add_plane(-rd, -ud, ofs);
@@ -56,10 +56,42 @@ void PrimitiveBox::update() {
     add_plane(rd, fd, -ofs);
 
   if (front_face)
-    add_plane(-ud, -fd, ofs);
+  add_plane(-ud, -fd, ofs);
 
   if (back_face)
     add_plane(fd, ud, -ofs);
 
   commit();
+}
+
+void PrimitiveBox::mesh_parameters(ParameterEditor *editor) {
+  editor->add_numeric_parameter("width", width);
+  editor->add_numeric_parameter("length", length);
+  editor->add_numeric_parameter("height", height);
+}
+
+bool PrimitiveBox::_set(const StringName& name, const Variant& value) {
+  if( name == "width" )
+    width = value;
+  else if( name == "length" )
+    length = value;
+  else if( name == "height" )
+    height = value;
+  else
+    return false;
+
+  return true;
+}
+
+
+PrimitiveBox::PrimitiveBox() {
+  width = 2.0;
+  length = 2.0;
+  height = 2.0;
+  right_face = true;
+  left_face = true;
+  top_face = true;
+  bottom_face = true;
+  front_face = true;
+  back_face = true;
 }

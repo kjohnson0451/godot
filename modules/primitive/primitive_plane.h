@@ -1,5 +1,5 @@
 /*************************************************************************/
-/*  primitive_editor_plugin.h                                            */
+/*  primitive_plane.h                                                    */
 /*************************************************************************/
 /*                       This file is part of:                           */
 /*                           GODOT ENGINE                                */
@@ -26,60 +26,29 @@
 /* TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE     */
 /* SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.                */
 /*************************************************************************/
-#ifndef PRIMITIVE_EDITOR_PLUGIN_H
-#define PRIMITIVE_EDITOR_PLUGIN_H
+#ifndef PRIMITIVE_PLANE_H
+#define PRIMITIVE_PLANE_H
 
-#include "primitive_dialog.h"
-#include "tools/editor/plugins/mesh_editor_plugin.h"
-#include "tools/editor/plugins/spatial_editor_plugin.h"
+#include "primitive.h"
+#include "primitive_dialog_editors.h"
 
-class PrimitiveEditor : public HBoxContainer {
-  OBJ_TYPE(PrimitiveEditor, HBoxContainer);
+class PrimitivePlane : public Primitive {
+  OBJ_TYPE(PrimitivePlane, Primitive);
 
  private:
-  enum Menu {
-    MENU_OPTION_BOX,
-    MENU_OPTION_CIRCLE,
-    MENU_OPTION_CONE,
-    MENU_OPTION_PLANE,
-    MENU_OPTION_EDIT
-  };
-
-  Primitive *primitive;
-  UndoRedo *undo_redo;
-  EditorNode *editor;
-  Spatial *selected;
-  Node *edited_scene;
-  HBoxContainer *spatial_editor_hb;
-  MenuButton *add_primitive_button;
-  MeshInstance *mesh_instance;
-  PrimitiveDialog *dialog;
-  int edit_index;
-
-  void _menu_option(int);
-  void _undo_redo(String name);
-  void _display_info(uint32_t start = 0);
-  void _update_mesh();
-  void _dialog_closed();
-  void _selection_changed();
+  float width;
+  float length;
+  float start_height;
+  float end_height;
 
  protected:
-  static void _bind_methods();
+  bool _set(const StringName& name, const Variant& value);
 
  public:
-  PrimitiveEditor(EditorNode *p_editor, EditorPlugin *p_plugin);
-  ~PrimitiveEditor();
+  String get_name() const;
+  void update();
+  void mesh_parameters(ParameterEditor *editor);
+  PrimitivePlane();
 };
 
-class PrimitiveEditorPlugin : public EditorPlugin {
-  OBJ_TYPE(PrimitiveEditorPlugin, EditorPlugin);
-
- private:
-  PrimitiveEditor *primitive_editor;
-  EditorNode *editor;
-
- public:
-  //TODO: It may or may not be necessary to add the make_visible method. Find out.
-  PrimitiveEditorPlugin(EditorNode *p_node);
-};
 #endif

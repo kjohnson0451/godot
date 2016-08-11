@@ -29,6 +29,11 @@
 #include "primitive.h"
 #include "primitive_utils.h"
 
+void Primitive::set_mesh(Ref<Mesh> r_mesh) {
+  mesh = r_mesh; //TODO: This doesn't need to be cleared later?
+  mesh->set_name(get_name().replace(" ","_").to_lower());
+}
+
 Ref<Mesh> Primitive::get_mesh() {
   return mesh;
 }
@@ -51,6 +56,26 @@ void Primitive::add_plane(Vector3 dir1, Vector3 dir2, Vector3 offset = Vector3()
   uv = plane_uv(width, height);
 
   add_quad(verts, uv);
+}
+
+void Primitive::add_tri(Vector3Array verts, Vector2Array uv) {
+  if (flip_normals) {
+    verts.invert();
+    uv.invert();
+  }
+
+  if (uv.size()) {
+    add_uv(uv[0]);
+    add_vertex(verts[0]);
+    add_uv(uv[1]);
+    add_vertex(verts[1]);
+    add_uv(uv[2]);
+    add_vertex(verts[2]);
+  } else {
+    add_vertex(verts[0]);
+    add_vertex(verts[1]);
+    add_vertex(verts[2]);
+  }
 }
 
 void Primitive::add_quad(Vector3Array verts, Vector2Array uv) {
@@ -94,8 +119,7 @@ void Primitive::commit() {
 }
 
 Primitive::Primitive() {
-  mesh = Ref<Mesh>(memnew(Mesh)); //TODO: This doesn't need to be cleared later?
-  mesh->set_name(get_name().replace(" ","_").to_lower());
+
 }
 
 Primitive::~Primitive() {

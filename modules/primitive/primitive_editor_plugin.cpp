@@ -29,6 +29,9 @@
 #include "primitive_editor_plugin.h"
 #include "primitive.h"
 #include "primitive_box.h"
+#include "primitive_circle.h"
+#include "primitive_cone.h"
+#include "primitive_plane.h"
 
 void PrimitiveEditor::_menu_option(int option) {
   /******************************************************************************************************************************
@@ -36,10 +39,10 @@ void PrimitiveEditor::_menu_option(int option) {
    * What that subclass is depends on which menu button was pressed. The mesh that Primitive 'created' is then
    * assigned to the MeshInstance.
    ******************************************************************************************************************************/
-  Primitive *p_primitive = NULL;
+  Ref<Mesh> mesh;
+  String primitive_type;
 
   edited_scene = get_tree()->get_edited_scene_root();
-  selected = SpatialEditor::get_singleton()->get_selected();
 
   // if ( !selected && edited_scene )
 
@@ -49,36 +52,118 @@ void PrimitiveEditor::_menu_option(int option) {
   if( !selected || !edited_scene)
     return;
 
-  mesh_instance = memnew(MeshInstance);
+  if( option != MENU_OPTION_EDIT ) {
+    mesh_instance = memnew(MeshInstance);
+    mesh = Ref<Mesh>(memnew(Mesh));
 
-  switch(option) {
-  case MENU_OPTION_BOX: {
-    _undo_redo("Box");
-    mesh_instance->set_name("Box");
+    switch(option) {
+    case MENU_OPTION_BOX:
+      primitive_type = "Box";
+      primitive = memnew(PrimitiveBox); //TODO: This doesn't need typecasting?
+      break;
+    case MENU_OPTION_CIRCLE:
+      primitive_type = "Circle";
+      primitive = memnew(PrimitiveCircle); //TODO: This doesn't need typecasting?
+      break;
+    case MENU_OPTION_CONE:
+      primitive_type = "Cone";
+      primitive = memnew(PrimitiveCone);
+      break;
+    case MENU_OPTION_PLANE:
+      primitive_type = "Plane";
+      primitive = memnew(PrimitivePlane); //TODO: This doesn't need typecasting?
+      break;
+    }
 
-    p_primitive = memnew(PrimitiveBox); //TODO: This doesn't need typecasting?
-  } break;
-  }
+    _undo_redo("Create " + primitive_type);
+    mesh_instance->set_name(primitive_type);
+    mesh->set_meta("primitive_type", primitive_type);
 
-  if (p_primitive) {
-    p_primitive->update();
-    //TODO: In this case, mesh_instance doesn't get deallocated later. Is that OK?
-    mesh_instance->set_mesh(p_primitive->get_mesh());
-
-    memdelete(p_primitive);
+    mesh_instance->set_mesh(mesh);
   } else {
-    memdelete(mesh_instance);
+    //TODO: Make an undo redo for this.
+
+    //TODO: Make sure this mesh is valid.
+    mesh = mesh_instance->get_mesh();
+
+    primitive_type = mesh->get_meta("primitive_type");
+
+    if( primitive_type == "Box" )
+      primitive = memnew(PrimitiveBox);
+    if( primitive_type == "Circle" )
+      primitive = memnew(PrimitiveCircle);
+    else if( primitive_type == "Cone" )
+      primitive = memnew(PrimitiveCone);
+    else if( primitive_type == "Plane" )
+      primitive = memnew(PrimitivePlane);
+
+    List<String> meta_list;
+    mesh->get_meta_list(&meta_list);
+
+    for(List<String>::Element *E=meta_list.front();E;E=E->next()) {
+      String meta_name = E->get();
+      if( meta_name == "primitive_type" )
+        continue;
+      Variant meta_value = mesh->get_meta(meta_name);
+      primitive->set(meta_name.replace("primitive_", ""), meta_value);
+    }
   }
+
+  primitive->set_mesh(mesh);
+  primitive->update();
+
+  dialog->edit(mesh_instance, primitive);
+  dialog->show_dialog();
+
+  add_primitive_button->set_disabled(true);
 }
 
 void PrimitiveEditor::_bind_methods() {
   ObjectTypeDB::bind_method("_menu_option",&PrimitiveEditor::_menu_option);
+  ObjectTypeDB::bind_method("_update_mesh",&PrimitiveEditor::_update_mesh);
+  ObjectTypeDB::bind_method("_dialog_closed",&PrimitiveEditor::_dialog_closed);
+  ObjectTypeDB::bind_method("_selection_changed",&PrimitiveEditor::_selection_changed);
+}
+
+void PrimitiveEditor::_update_mesh() {
+  primitive->update();
+}
+
+void PrimitiveEditor::_display_info(uint32_t start) {
+  if (!mesh_instance)
+    return;
+
+  uint32_t exec_time = OS::get_singleton()->get_ticks_msec();
+  Ref<Mesh> mesh = mesh_instance->get_mesh();
+  int i;
+  int surface_count = mesh->get_surface_count();
+  int surf_v, surf_idx;
+  int verts = 0;
+  int tris = 0;
+
+  for (i = 0; i<surface_count; i++) {
+    surf_v = mesh->surface_get_array_len(i);
+    verts += surf_v;
+
+    surf_idx = mesh->surface_get_array_index_len(i);
+    if(surf_idx == Mesh::NO_INDEX_ARRAY)
+      surf_idx = surf_v;
+
+    tris += surf_idx/3;
+  }
+
+}
+
+void PrimitiveEditor::_dialog_closed() {
+  if(primitive) {
+    memdelete(primitive);
+    primitive = NULL;
+  }
+  add_primitive_button->set_disabled(false);
 }
 
 void PrimitiveEditor::_undo_redo(String name) {
-  String action = "Create ";
-  action.insert(7, name);
-  undo_redo->create_action(action);
+  undo_redo->create_action(name);
 
   if(edited_scene){
     undo_redo->add_do_method(selected, "add_child", mesh_instance);
@@ -100,7 +185,35 @@ void PrimitiveEditor::_undo_redo(String name) {
   undo_redo->commit_action();
 }
 
-PrimitiveEditor::PrimitiveEditor(EditorNode *p_editor) {
+void PrimitiveEditor::_selection_changed() {
+  //TODO: This does not get the initial selected node on startup.
+  //      Connecting enter_tree may make this possible.
+  if (!(selected = SpatialEditor::get_singleton()->get_selected()))
+    return;
+
+  if( selected->get_type() == "MeshInstance" ) {
+    mesh_instance = selected->cast_to<MeshInstance>();
+  } else {
+    add_primitive_button->get_popup()->set_item_disabled(edit_index, true);
+    return;
+  }
+
+  Ref<Mesh> mesh = mesh_instance->get_mesh();
+
+  if (mesh == NULL) {
+    add_primitive_button->get_popup()->set_item_disabled(edit_index, true);
+    return;
+  }
+
+  if( mesh->has_meta("primitive_type")) {
+    add_primitive_button->get_popup()->set_item_disabled(edit_index, false);
+  }
+  else {
+    add_primitive_button->get_popup()->set_item_disabled(edit_index, true);
+  }
+}
+
+PrimitiveEditor::PrimitiveEditor(EditorNode *p_editor, EditorPlugin *p_plugin) {
   /******************************************************************************************************************************
    * The "Add Primitive" menu button is added to the Spatial Editor menu (For all things 3D).
    * Menu items are added to the button, and _menu_option() is run at the press of one of those
@@ -109,8 +222,12 @@ PrimitiveEditor::PrimitiveEditor(EditorNode *p_editor) {
    * TODO: Place this button in a more appropriate place on the spatial editor.
    ******************************************************************************************************************************/
   editor=p_editor;
+  primitive = NULL;
+  mesh_instance = NULL;
+  dialog = memnew(PrimitiveDialog);
+  p_plugin->get_base_control()->add_child(dialog);
+  //TODO: I need to access the PrimitiveEditorPlugin, but I'm not sure if this is the best implementation
   undo_redo = SpatialEditor::get_singleton()->get_undo_redo();
-
   spatial_editor_hb = memnew( HBoxContainer );
   SpatialEditor::get_singleton()->add_control_to_menu_panel(spatial_editor_hb);
 
@@ -118,18 +235,40 @@ PrimitiveEditor::PrimitiveEditor(EditorNode *p_editor) {
   spatial_editor_hb->add_child(memnew(VSeparator));
 
   add_primitive_button = memnew( MenuButton );
-  //The ONLY thing necessary here is to drop icon_add_primitive.png into tools/editor/icons/.
+  // The ONLY thing necessary here is to drop icon_add_primitive.png into tools/editor/icons/.
   add_primitive_button->set_icon(p_editor->get_gui_base()->get_icon("AddPrimitive", "EditorIcons"));
   add_primitive_button->set_tooltip("Add a new primitive.");
-  spatial_editor_hb->add_child( add_primitive_button );
 
   add_primitive_button->get_popup()->add_item("Box", MENU_OPTION_BOX);
+  add_primitive_button->get_popup()->add_item("Circle", MENU_OPTION_CIRCLE);
+  add_primitive_button->get_popup()->add_item("Cone", MENU_OPTION_CONE);
+  add_primitive_button->get_popup()->add_item("Plane", MENU_OPTION_PLANE);
+  add_primitive_button->get_popup()->add_separator();
+  //TODO: The edit primitive button must be disabled or enabled on startup
+  //      depending on the object that gets selected on startup.
+  add_primitive_button->get_popup()->add_item("Edit Primitive", MENU_OPTION_EDIT);
+
+  edit_index = add_primitive_button->get_popup()->get_item_index(MENU_OPTION_EDIT);
+
+  add_primitive_button->get_popup()->set_item_disabled(edit_index, true);
 
   add_primitive_button->get_popup()->connect("item_pressed", this,"_menu_option");
+
+  spatial_editor_hb->add_child( add_primitive_button );
+
+  dialog->connect_editor("parameters", this, "_update_mesh");
+  dialog->connect("dialog_closed", this, "_dialog_closed");
+
+  //TODO: This run whenever the user clicks anywhere on the scene. Since this only needs
+  //      to run when the user selects another item, there might be a more efficient signal.
+  p_editor->get_editor_selection()->connect("selection_changed", this, "_selection_changed");
 }
 
 PrimitiveEditor::~PrimitiveEditor() {
-
+  if(primitive){
+    memdelete(primitive);
+    primitive = NULL;
+  }
 }
 
 PrimitiveEditorPlugin::PrimitiveEditorPlugin(EditorNode *p_node) {
@@ -138,10 +277,7 @@ PrimitiveEditorPlugin::PrimitiveEditorPlugin(EditorNode *p_node) {
    * This routine is called because PrimitiveEditorPlugin was added to EditorPlugins (see register_types.cpp).
    ******************************************************************************************************************************/
   editor=p_node;
-  primitive_editor=memnew( PrimitiveEditor(p_node) );
-
-  // I don't know why this is necessary but I get a segfault if I remove it.
+  primitive_editor=memnew( PrimitiveEditor(p_node, this) );
   SpatialEditor::get_singleton()->get_palette_split()->add_child(primitive_editor);
   SpatialEditor::get_singleton()->get_palette_split()->move_child(primitive_editor,0);
-
 }

@@ -30,25 +30,30 @@
 #define PRIMITIVE_BOX_H
 
 #include "primitive.h"
+#include "primitive_dialog_editors.h"
 
 class PrimitiveBox : public Primitive {
   OBJ_TYPE(PrimitiveBox, Primitive);
 
  private:
-  static const real_t width = 2.0;
-  static const real_t length = 2.0;
-  static const real_t height = 2.0;
-  static const bool right_face = true;
-  static const bool left_face = true;
-  static const bool top_face = true;
-  static const bool bottom_face = true;
-  static const bool front_face = true;
-  static const bool back_face = true;
+  float width;
+  float length;
+  float height;
+  bool right_face;
+  bool left_face;
+  bool top_face;
+  bool bottom_face;
+  bool front_face;
+  bool back_face;
+
+ protected:
+  bool _set(const StringName& name, const Variant& value);
 
  public:
   String get_name() const;
   void update();
-
+  void mesh_parameters(ParameterEditor *editor);
+  PrimitiveBox();
 };
 
 #endif

@@ -31,8 +31,18 @@
 
 #include "core/variant.h"
 
+//TODO: Should these be in a namespace? If so, look at core/math/math_funcs.h as an example.
+
+const float TWO_PI = Math_PI * 2;
+
 Vector3Array build_plane(Vector3 dir1, Vector3 dir2, Vector3 offset = Vector3());
 
+Vector3Array build_circle(Vector3 pos, int segments, float radius = 1, float start = 0, float angle = TWO_PI);
+
+Vector2Array ellipse_uv(Vector2 pos, int segments, Vector2 radius = Vector2(1, 1), float angle = TWO_PI);
+
 Vector2Array plane_uv(real_t width, real_t height, bool last = true);
+
+
 
 #endif

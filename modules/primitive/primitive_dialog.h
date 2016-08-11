@@ -1,5 +1,5 @@
 /*************************************************************************/
-/*  primitive_editor_plugin.h                                            */
+/*  primitive_dialog.h                                                   */
 /*************************************************************************/
 /*                       This file is part of:                           */
 /*                           GODOT ENGINE                                */
@@ -26,60 +26,42 @@
 /* TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE     */
 /* SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.                */
 /*************************************************************************/
-#ifndef PRIMITIVE_EDITOR_PLUGIN_H
-#define PRIMITIVE_EDITOR_PLUGIN_H
+#ifndef PRIMITIVE_DIALOG_H
+#define PRIMITIVE_DIALOG_H
 
-#include "primitive_dialog.h"
-#include "tools/editor/plugins/mesh_editor_plugin.h"
-#include "tools/editor/plugins/spatial_editor_plugin.h"
+#include "scene/3d/mesh_instance.h"
+#include "scene/gui/dialogs.h"
+#include "scene/gui/option_button.h"
+#include "scene/gui/panel_container.h"
+#include "primitive_dialog_editors.h"
 
-class PrimitiveEditor : public HBoxContainer {
-  OBJ_TYPE(PrimitiveEditor, HBoxContainer);
+class PrimitiveEditor;
+
+class PrimitiveDialog : public WindowDialog {
+  OBJ_TYPE(PrimitiveDialog, WindowDialog);
 
  private:
-  enum Menu {
-    MENU_OPTION_BOX,
-    MENU_OPTION_CIRCLE,
-    MENU_OPTION_CONE,
-    MENU_OPTION_PLANE,
-    MENU_OPTION_EDIT
-  };
-
-  Primitive *primitive;
-  UndoRedo *undo_redo;
-  EditorNode *editor;
-  Spatial *selected;
-  Node *edited_scene;
-  HBoxContainer *spatial_editor_hb;
-  MenuButton *add_primitive_button;
   MeshInstance *mesh_instance;
-  PrimitiveDialog *dialog;
-  int edit_index;
-
-  void _menu_option(int);
-  void _undo_redo(String name);
-  void _display_info(uint32_t start = 0);
-  void _update_mesh();
-  void _dialog_closed();
-  void _selection_changed();
+  OptionButton *options;
+  HBoxContainer *color_hb;
+  PanelContainer *main_panel;
+  Label *text_display;
+  ParameterEditor *parameter_editor;
+  int current_editor;
+  void _dialog_hide();
+  void set_current_editor(int index);
+  TreeEditor *get_editor(String name);
 
  protected:
   static void _bind_methods();
 
  public:
-  PrimitiveEditor(EditorNode *p_editor, EditorPlugin *p_plugin);
-  ~PrimitiveEditor();
+  void edit(MeshInstance *node, Primitive* builder);
+  void show_dialog();
+  void connect_editor(const StringName& name, Object *obj, String method);
+  PrimitiveDialog();
+  ~PrimitiveDialog();
+
 };
 
-class PrimitiveEditorPlugin : public EditorPlugin {
-  OBJ_TYPE(PrimitiveEditorPlugin, EditorPlugin);
-
- private:
-  PrimitiveEditor *primitive_editor;
-  EditorNode *editor;
-
- public:
-  //TODO: It may or may not be necessary to add the make_visible method. Find out.
-  PrimitiveEditorPlugin(EditorNode *p_node);
-};
 #endif

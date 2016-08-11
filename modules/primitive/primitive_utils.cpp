@@ -39,6 +39,47 @@ Vector3Array build_plane(Vector3 dir1, Vector3 dir2, Vector3 offset) {
   return plane;
 }
 
+Vector3Array build_circle(Vector3 pos, int segments, float radius, float start, float angle) {
+  Vector3Array circle = Vector3Array(); circle.resize(segments + 1);
+
+  float s_angle = angle / (float)segments;
+
+  int i; float a;
+  for( i = 0; i < segments; i++ ) {
+    a = (s_angle * float(i)) + start;
+    circle.set(i, Vector3(Math::cos(a), 0, Math::sin(a)) * radius + pos);
+  }
+
+  if (angle != TWO_PI) {
+    angle += start;
+    circle.set(segments, Vector3(Math::cos(angle), 0, Math::sin(angle)) * radius + pos);
+  } else {
+    circle.set(segments, circle.get(0));
+  }
+
+  return circle;
+}
+
+Vector2Array ellipse_uv(Vector2 pos, int segments, Vector2 radius, float angle) {
+  Vector2Array ellipse = Vector2Array(); ellipse.resize(segments + 1);
+
+  float s_angle = angle/segments;
+
+  int i; float a;
+  for( i = 0; i < segments; i++ ) {
+    a = s_angle * float(i);
+    ellipse.set(i, Vector2(Math::sin(a) * radius.x, Math::cos(a) * radius.y) + pos);
+  }
+
+  if (angle != TWO_PI) {
+    ellipse.set(segments, Vector2(Math::sin(angle) * radius.x, Math::cos(angle) * radius.y) + pos);
+  } else {
+    ellipse.set(segments, ellipse.get(0));
+  }
+
+  return ellipse;
+}
+
 Vector2Array plane_uv(real_t width, real_t height, bool last) {
   Vector2Array uv  = Vector2Array(); uv.resize(4);
 

@@ -1,5 +1,5 @@
 /*************************************************************************/
-/*  primitive_editor_plugin.h                                            */
+/*  primitive_circle.cpp                                                 */
 /*************************************************************************/
 /*                       This file is part of:                           */
 /*                           GODOT ENGINE                                */
@@ -26,60 +26,64 @@
 /* TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE     */
 /* SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.                */
 /*************************************************************************/
-#ifndef PRIMITIVE_EDITOR_PLUGIN_H
-#define PRIMITIVE_EDITOR_PLUGIN_H
+#include "primitive_circle.h"
+#include "primitive_utils.h"
 
-#include "primitive_dialog.h"
-#include "tools/editor/plugins/mesh_editor_plugin.h"
-#include "tools/editor/plugins/spatial_editor_plugin.h"
+String PrimitiveCircle::get_name() const {
+  return "Circle";
+}
 
-class PrimitiveEditor : public HBoxContainer {
-  OBJ_TYPE(PrimitiveEditor, HBoxContainer);
+void PrimitiveCircle::update() {
+  float slice_angle = TWO_PI - Math::deg2rad(slice_to);
 
- private:
-  enum Menu {
-    MENU_OPTION_BOX,
-    MENU_OPTION_CIRCLE,
-    MENU_OPTION_CONE,
-    MENU_OPTION_PLANE,
-    MENU_OPTION_EDIT
-  };
+  Vector3 center = Vector3();
+  Vector2 center_uv = Vector2(0.5, 0.5);
 
-  Primitive *primitive;
-  UndoRedo *undo_redo;
-  EditorNode *editor;
-  Spatial *selected;
-  Node *edited_scene;
-  HBoxContainer *spatial_editor_hb;
-  MenuButton *add_primitive_button;
-  MeshInstance *mesh_instance;
-  PrimitiveDialog *dialog;
-  int edit_index;
+  Vector3Array circle = build_circle(center, segments, radius, Math::deg2rad(slice_from), slice_angle);
+  Vector2Array e_uv = ellipse_uv(center_uv, segments, Vector2(radius, radius), slice_angle);
 
-  void _menu_option(int);
-  void _undo_redo(String name);
-  void _display_info(uint32_t start = 0);
-  void _update_mesh();
-  void _dialog_closed();
-  void _selection_changed();
+  Vector3Array verts;
+  Vector2Array uv;
 
- protected:
-  static void _bind_methods();
+  begin();
 
- public:
-  PrimitiveEditor(EditorNode *p_editor, EditorPlugin *p_plugin);
-  ~PrimitiveEditor();
-};
+  add_smooth_group(smooth);
 
-class PrimitiveEditorPlugin : public EditorPlugin {
-  OBJ_TYPE(PrimitiveEditorPlugin, EditorPlugin);
+  //TODO: Find an easier way to define a Vector with pre-defined elements.
+  //      Like {e1, e2, e3}.
+  for (int i = 0; i < segments; i++) {
+    verts = Vector3Array();
+    verts.push_back(center); verts.push_back(circle[i]); verts.push_back(circle[i+1]);
 
- private:
-  PrimitiveEditor *primitive_editor;
-  EditorNode *editor;
+    uv = Vector2Array();
+    uv.push_back(center_uv); uv.push_back(e_uv[i]); uv.push_back(e_uv[i+1]);
 
- public:
-  //TODO: It may or may not be necessary to add the make_visible method. Find out.
-  PrimitiveEditorPlugin(EditorNode *p_node);
-};
-#endif
+    add_tri(verts, uv);
+    }
+
+  commit();
+}
+
+void PrimitiveCircle::mesh_parameters(ParameterEditor *editor) {
+  editor->add_numeric_parameter("radius", radius);
+  editor->add_numeric_parameter("segments", segments, 3, 64, 1);
+}
+
+bool PrimitiveCircle::_set(const StringName& name, const Variant& value) {
+  if( name == "radius" )
+    radius = value;
+  else if( name == "segments" )
+    segments = value;
+  else
+    return false;
+
+  return true;
+}
+
+
+PrimitiveCircle::PrimitiveCircle() {
+  radius = 1.0;
+  segments = 16;
+  slice_from = 0.0;
+  slice_to = 0.0;
+}

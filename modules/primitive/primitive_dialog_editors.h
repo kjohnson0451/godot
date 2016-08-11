@@ -1,5 +1,5 @@
 /*************************************************************************/
-/*  primitive_editor_plugin.h                                            */
+/*  primitive_dialog_editors.h                                           */
 /*************************************************************************/
 /*                       This file is part of:                           */
 /*                           GODOT ENGINE                                */
@@ -26,60 +26,64 @@
 /* TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE     */
 /* SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.                */
 /*************************************************************************/
-#ifndef PRIMITIVE_EDITOR_PLUGIN_H
-#define PRIMITIVE_EDITOR_PLUGIN_H
+#ifndef PRIMITIVE_DIALOG_EDITORS_H
+#define PRIMITIVE_DIALOG_EDITORS_H
 
-#include "primitive_dialog.h"
-#include "tools/editor/plugins/mesh_editor_plugin.h"
-#include "tools/editor/plugins/spatial_editor_plugin.h"
+#include "scene/gui/box_container.h"
+#include "scene/gui/tree.h"
+#include "scene/gui/check_box.h"
+#include "primitive.h"
 
-class PrimitiveEditor : public HBoxContainer {
-  OBJ_TYPE(PrimitiveEditor, HBoxContainer);
+class TreeEditor : public VBoxContainer {
+  OBJ_TYPE(TreeEditor, VBoxContainer);
+
+ protected:
+  Tree *tree;
+  Primitive *builder;
+  TreeItem *current;
+  TreeItem* _create_item(const String& text, const StringName& type);
+
+ public:
+  virtual String get_signal() =0;
+  void add_numeric_parameter(const String& text, float value, float min_ = 0.001, float max_ = 100, float step = 0.001);
+  void add_numeric_parameter(const String& text, int value, float min_ = 0.001, float max_ = 100, float step = 0.001);
+  TreeEditor();
+};
+
+class ParameterEditor : public TreeEditor {
+  OBJ_TYPE(ParameterEditor, TreeEditor);
 
  private:
-  enum Menu {
-    MENU_OPTION_BOX,
-    MENU_OPTION_CIRCLE,
-    MENU_OPTION_CONE,
-    MENU_OPTION_PLANE,
-    MENU_OPTION_EDIT
-  };
-
-  Primitive *primitive;
-  UndoRedo *undo_redo;
-  EditorNode *editor;
-  Spatial *selected;
-  Node *edited_scene;
-  HBoxContainer *spatial_editor_hb;
-  MenuButton *add_primitive_button;
-  MeshInstance *mesh_instance;
-  PrimitiveDialog *dialog;
-  int edit_index;
-
-  void _menu_option(int);
-  void _undo_redo(String name);
-  void _display_info(uint32_t start = 0);
-  void _update_mesh();
-  void _dialog_closed();
-  void _selection_changed();
+  HBoxContainer *hb;
+  CheckBox *smooth_button;
+  CheckBox *flip_button;
+  void reset_scrollbar();
+  void _item_edited();
+  String get_parameter_name(TreeItem *item);
+  Variant get_parameter_value(TreeItem *item);
 
  protected:
   static void _bind_methods();
+  String get_signal();
 
  public:
-  PrimitiveEditor(EditorNode *p_editor, EditorPlugin *p_plugin);
-  ~PrimitiveEditor();
+  void edit(Primitive *p_primitive);
+  ParameterEditor();
+  ~ParameterEditor();
 };
 
-class PrimitiveEditorPlugin : public EditorPlugin {
-  OBJ_TYPE(PrimitiveEditorPlugin, EditorPlugin);
+
+class ModifierEditor : public TreeEditor {
+  OBJ_TYPE(ModifierEditor, TreeEditor);
 
  private:
-  PrimitiveEditor *primitive_editor;
-  EditorNode *editor;
+  PopupMenu *menu;
+
+ protected:
+  String get_signal();
 
  public:
-  //TODO: It may or may not be necessary to add the make_visible method. Find out.
-  PrimitiveEditorPlugin(EditorNode *p_node);
+  ModifierEditor();
 };
+
 #endif

@@ -29,8 +29,13 @@
 #include "register_types.h"
 #ifndef _3D_DISABLED
 #include "object_type_db.h"
+#include "primitive_dialog_editors.h"
+#include "primitive_dialog.h"
 #include "primitive.h"
 #include "primitive_box.h"
+#include "primitive_circle.h"
+#include "primitive_cone.h"
+#include "primitive_plane.h"
 #include "primitive_editor_plugin.h"
 #endif
 
@@ -38,7 +43,14 @@ void register_primitive_types() {
 #ifndef _3D_DISABLED
   ObjectTypeDB::register_virtual_type<Primitive>();
   ObjectTypeDB::register_type<PrimitiveBox>();
+  ObjectTypeDB::register_type<PrimitiveCircle>();
+  ObjectTypeDB::register_type<PrimitiveCone>();
+  ObjectTypeDB::register_type<PrimitivePlane>();
 #ifdef TOOLS_ENABLED
+  ObjectTypeDB::register_type<PrimitiveDialog>();
+  ObjectTypeDB::register_virtual_type<TreeEditor>();
+  ObjectTypeDB::register_type<ModifierEditor>();
+  ObjectTypeDB::register_type<ParameterEditor>();
   EditorPlugins::add_by_type<PrimitiveEditorPlugin>();
 #endif
 #endif
